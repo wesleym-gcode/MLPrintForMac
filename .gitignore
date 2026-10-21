@@ -1,0 +1,6 @@
+.DS_Store
+.build/
+build/
+# Built by scripts/build-splix.sh (GPL v2 components, not stored in this repo)
+Resources/rastertoqpdl
+Resources/ml2160.ppd
