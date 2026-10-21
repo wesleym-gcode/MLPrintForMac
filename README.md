@@ -8,7 +8,7 @@ funciona em Macs recentes).
 
 ## Recursos
 
-- Descobre a impressora na rede (Bonjour) ou por IP; mostra estado e avisos.
+- Descobre a impressora sozinho (Bonjour e varredura da rede local) ou por IP; mostra estado e avisos.
 - Imprime **PDF, imagens, Word (DOCX/DOC/ODT), RTF, TXT, HTML**.
 - Pré-visualização folha a folha.
 - Retrato/Paisagem, ajuste ou tamanho real, 1/2/4/6/9 páginas por folha, margem extra.

@@ -66,13 +66,13 @@ struct PrinterClient {
         return try IPPDecoder.decode(data)
     }
 
-    func status() async throws -> PrinterStatus {
+    func status(timeout: TimeInterval = 6) async throws -> PrinterStatus {
         var request = IPPRequest(operation: .getPrinterAttributes, printerURI: printerURI, user: user)
         request.add(keywords: "requested-attributes", [
             "printer-name", "printer-make-and-model", "printer-state",
             "printer-state-reasons", "printer-state-message",
         ])
-        let response = try await send(request, timeout: 6)
+        let response = try await send(request, timeout: timeout)
         guard response.isSuccess else { throw IPPError.operation(response.statusText) }
         let attrs = response.printer
         let state: PrinterStatus.State

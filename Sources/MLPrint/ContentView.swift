@@ -152,12 +152,16 @@ private struct PrinterCard: View {
                         }
                         if model.discovery.printers.isEmpty { Text("Nenhuma impressora encontrada") }
                         Divider()
+                        Button(model.discovery.scanning ? "Procurando…" : "Procurar na rede") {
+                            Task { await model.discovery.scan() }
+                        }
+                        .disabled(model.discovery.scanning)
                         Button("Digitar endereço…") {
                             draft = model.host
                             editing = true
                         }
                     } label: {
-                        Label(model.host, systemImage: "wifi")
+                        Label(model.host.isEmpty ? "Escolher impressora" : model.host, systemImage: "wifi")
                     }
                     .menuStyle(.borderlessButton)
                     .fixedSize()
@@ -576,7 +580,10 @@ private struct WirelessView: View {
 
             HStack {
                 Button("Atualizar") { Task { await model.loadWireless() } }
-                Menu("Procurar impressora") {
+                Menu(model.discovery.scanning ? "Procurando…" : "Procurar impressora") {
+                    Button("Procurar na rede") { Task { await model.discovery.scan() } }
+                        .disabled(model.discovery.scanning)
+                    Divider()
                     ForEach(model.discovery.printers) { printer in
                         Button(printer.name) {
                             Task {

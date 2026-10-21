@@ -60,11 +60,15 @@ final class AppModel: ObservableObject {
     private var pollTask: Task<Void, Never>?
     private var printTask: Task<Void, Never>?
     private var discoveryObserver: AnyCancellable?
+    private var autoSelectObserver: AnyCancellable?
     private var duplexContinuation: CheckedContinuation<Bool, Never>?
 
     init() {
-        host = UserDefaults.standard.string(forKey: "printerHost") ?? "192.168.68.120"
+        host = UserDefaults.standard.string(forKey: "printerHost") ?? ""
         discoveryObserver = discovery.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        autoSelectObserver = discovery.$printers.sink { [weak self] printers in
+            Task { @MainActor in await self?.autoSelect(from: printers) }
+        }
     }
 
     var client: PrinterClient { PrinterClient(host: host.trimmingCharacters(in: .whitespaces)) }
@@ -84,6 +88,15 @@ final class AppModel: ObservableObject {
 
     func start() {
         discovery.start()
+        if host.isEmpty {
+            // Bonjour first; if no printer is chosen shortly after, scan the local network.
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(3))
+                guard let self, self.host.isEmpty else { return }
+                await self.discovery.scan()
+                await self.autoSelect(from: self.discovery.printers)
+            }
+        }
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -93,7 +106,24 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// With no printer chosen yet, picks a discovered Samsung ML printer. Queues that macOS itself
+    /// shares ("name @ computer") are ignored so the app never selects this Mac as the printer.
+    private func autoSelect(from printers: [DiscoveredPrinter]) async {
+        guard host.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let direct = printers.filter { !$0.name.contains(" @ ") }
+        let choice = direct.first {
+            $0.name.localizedCaseInsensitiveContains("samsung") || $0.name.contains("ML-")
+        }
+        if let choice { await use(choice) }
+    }
+
     func refresh() async {
+        guard !host.trimmingCharacters(in: .whitespaces).isEmpty else {
+            status = nil
+            jobs = []
+            statusError = "Nenhuma impressora escolhida. Procurando na rede… (ou use o menu do IP ▸ Digitar endereço)"
+            return
+        }
         let client = self.client
         do {
             let status = try await client.status()
